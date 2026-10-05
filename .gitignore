@@ -1,0 +1,6 @@
+CLAUDE.md
+__pycache__/
+docs/
+check.py
+test/
+.superpowers/
