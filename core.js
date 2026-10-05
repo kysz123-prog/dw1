@@ -11,6 +11,18 @@
     return shuffle(items, rand).map(it => arrange(it, shuffle(it.choices.map((_, k) => k), rand)));
   }
 
+  // 전체에서 n문제 뽑기: 항별 비율을 유지(최대 나머지 방식), 같은 항 안에서는 무작위
+  function pickN(items, n, rand = Math.random) {
+    if (n >= items.length) return items.slice();
+    const groups = {};
+    for (const it of items) (groups[it.hang] = groups[it.hang] || []).push(it);
+    const hs = shuffle(Object.keys(groups), rand);        // 나머지가 같을 때 어느 항이 먼저일지 무작위
+    const share = hs.map(h => { const x = n * groups[h].length / items.length; return { h, k: Math.floor(x), r: x - Math.floor(x) }; });
+    let left = n - share.reduce((s, x) => s + x.k, 0);
+    for (const x of share.slice().sort((a, b) => b.r - a.r)) { if (left <= 0) break; x.k++; left--; }
+    return share.flatMap(x => shuffle(groups[x.h], rand).slice(0, x.k));
+  }
+
   // picks[i] = i번째 문제에서 고른 보기 번호(안 풀었으면 null). 안 푼 문제는 오답
   function grade(quiz, picks) {
     const wrong = [], hangs = {};
@@ -55,6 +67,6 @@
     return out;
   }
 
-  const Core = { buildQuiz, grade, snapshot, restore, ruleLines };
+  const Core = { buildQuiz, pickN, grade, snapshot, restore, ruleLines };
   if (typeof module !== "undefined") module.exports = Core; else window.Core = Core;
 })();

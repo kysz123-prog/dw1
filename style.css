@@ -142,3 +142,5 @@ table.hang tr.miss td { color: var(--red); font-weight: 700; }
 .bogi .r-head:first-of-type { margin-top: 0 !important; }
 .bogi .r-body { padding-left: 1em; }
 .bogi .r-body b { font-weight: 800; }
+#countGroup button small { display: block; font-size: 13px; font-weight: 500; opacity: .8; }
+.lead { word-break: keep-all; }

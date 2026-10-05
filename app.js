@@ -1,6 +1,6 @@
 // ===== 설정 (여기만 고치면 됨) =====
 const SHEET_URL = "";                                    // 구글 앱스 스크립트 웹앱 주소 (비워 두면 전송 안 함)
-const MINUTES = 60;                                      // 제한 시간(분)
+const MINUTES = { 50: 17, 100: 30, 150: 50 };           // 문제 수 → 제한 시간(분)
 const PASS = 80;                                         // 통과 점수(100점 만점)
 const IMG = { pass: "img/pass.webp", fail: "img/fail.webp" };
 Object.values(IMG).forEach(s => { new Image().src = s; });   // 결과 사진 미리 불러오기
@@ -12,7 +12,7 @@ const SAMPLE = { items: [
 
 // ===== 상태 =====
 let DATA = null;
-let quiz = [], idx = 0, picks = [], startedAt = 0, timerId = null, deadline = 0, finished = false;
+let count = null, quiz = [], idx = 0, picks = [], startedAt = 0, timerId = null, deadline = 0, finished = false;
 const $ = id => document.getElementById(id);
 
 // ===== 유틸 =====
@@ -56,18 +56,20 @@ async function load() {
 // ===== 시작 화면 =====
 function refreshStart() {
   const n = DATA ? DATA.items.length : 0;
-  $("info").textContent = failMsg + `총 ${n}문제 · 제한 ${MINUTES}분 · 통과 ${PASS}점`;
-  $("go").disabled = !(n && $("name").value.trim());
+  $("info").textContent = failMsg + (count ? `${Math.min(count, n)}문제 · 제한 ${MINUTES[count]}분 · 통과 ${PASS}점` : "문제 수를 골라 주세요.");
+  $("go").disabled = !(n && count && $("name").value.trim());
 }
+function setCount(c) { count = c; [...$("countGroup").children].forEach(b => b.classList.toggle("on", +b.dataset.count === c)); refreshStart(); }
+$("countGroup").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setCount(+b.dataset.count); });
 $("name").addEventListener("input", refreshStart);
 $("go").addEventListener("click", startQuiz);
 $("again").addEventListener("click", () => { show("start"); });
 
 // ===== 풀이 =====
 function startQuiz() {
-  quiz = Core.buildQuiz(DATA.items); picks = quiz.map(() => null);
+  quiz = Core.buildQuiz(Core.pickN(DATA.items, count)); picks = quiz.map(() => null);   // 항별 비율대로 count문제
   clearTimeout(autoId); idx = 0; finished = false;
-  startedAt = Date.now(); deadline = startedAt + MINUTES * 60000;
+  startedAt = Date.now(); deadline = startedAt + MINUTES[count] * 60000;
   enterQuiz();
 }
 function enterQuiz() {                 // 새로 시작·이어 풀기 공통: 풀이 화면을 열고 시계를 돌림
@@ -160,7 +162,7 @@ function finish(timedOut) {
   setTimeout(() => { $("suspense").hidden = true; $("reveal").hidden = false; }, 2000);
   saveWrongNotes(r.wrong);
   sendResult({
-    time: stamp(new Date()), name: $("name").value.trim(), level: "맞춤법",
+    time: stamp(new Date()), name: $("name").value.trim(), level: `${count}문제`,
     total: r.total, score: r.score, solved, wrong: r.wrong.map(w => w.q.id).join(","), seconds: sec, timedOut: timedOut ? "Y" : "N"
   });
 }
@@ -214,7 +216,7 @@ $("btnClearNotes").addEventListener("click", () => {
 const SKEY = "session";
 function saveSession() {
   if (finished || !quiz.length) return;
-  try { localStorage.setItem(SKEY, JSON.stringify({ name: $("name").value.trim(), startedAt, deadline, idx, ...Core.snapshot(quiz, picks) })); } catch (e) {}
+  try { localStorage.setItem(SKEY, JSON.stringify({ name: $("name").value.trim(), count, startedAt, deadline, idx, ...Core.snapshot(quiz, picks) })); } catch (e) {}
 }
 function clearSession() { try { localStorage.removeItem(SKEY); } catch (e) {} }
 function loadSession() {               // 문제가 바뀌었거나 깨졌으면 null(버림)
@@ -237,7 +239,7 @@ function checkResume() {
 }
 $("btnResume").addEventListener("click", () => {
   const s = saved; if (!s) return;
-  $("name").value = s.name; refreshStart();
+  $("name").value = s.name; setCount(s.count || null);
   quiz = s.quiz; picks = s.picks; idx = Math.min(Math.max(0, s.idx | 0), quiz.length - 1);
   startedAt = s.startedAt; deadline = s.deadline; finished = false; clearTimeout(autoId);
   enterQuiz();                          // 시간이 이미 끝났으면 tick()이 바로 제출
