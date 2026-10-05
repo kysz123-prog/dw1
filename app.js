@@ -26,7 +26,12 @@ const ask = q => q.type === "pick" ? "<보기>를 참고하여 바른 표기를 
 // <보기>: 그 항(+also 항)의 조문 전체(예시 제외). 조문은 questions.json의 rules에 항마다 한 번만 적음
 function bogi(q) {
   const text = [q.hang, ...(q.also || [])].map(h => DATA && DATA.rules && DATA.rules[h]).filter(Boolean).join("\n");
-  return text ? `<div class="bogi"><span class="bogi-t">&lt;보기&gt;</span>${esc(text).replace(/\n/g, "<br>")}</div>` : "";
+  if (!text) return "";
+  const lines = Core.ruleLines(text).map(l =>
+    l.kind === "head" ? `<p class="r-head">${esc(l.text)}</p>`
+    : l.kind === "note" ? `<p class="r-body"><b>${esc(l.label)}</b> ${esc(l.text)}</p>`
+    : `<p class="r-body">${esc(l.text)}</p>`).join("");
+  return `<div class="bogi"><span class="bogi-t">&lt;보기&gt;</span>${lines}</div>`;
 }
 // 문제 글: pick은 {{blank}} 자리에 밑줄 칸(고른 말이 있으면 그 말), find는 발문만
 function stemHTML(q, fill) {

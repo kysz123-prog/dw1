@@ -43,6 +43,18 @@
     return { quiz, picks: saved.picks.slice() };
   }
 
-  const Core = { buildQuiz, grade, snapshot, restore };
+  // 조문 글 → 줄 목록: '제N항'은 따로 한 줄(head), [붙임 …]은 이름표(note), 나머지는 본문(body)
+  function ruleLines(text) {
+    const out = [];
+    for (const line of text.split("\n")) {
+      const h = line.match(/^(제\d+항)\s*(.*)$/), n = line.match(/^(\[붙임[^\]]*\])\s*(.*)$/);
+      if (h) { out.push({ kind: "head", text: h[1] }); if (h[2]) out.push({ kind: "body", text: h[2] }); }
+      else if (n) out.push({ kind: "note", label: n[1], text: n[2] });
+      else out.push({ kind: "body", text: line });
+    }
+    return out;
+  }
+
+  const Core = { buildQuiz, grade, snapshot, restore, ruleLines };
   if (typeof module !== "undefined") module.exports = Core; else window.Core = Core;
 })();
