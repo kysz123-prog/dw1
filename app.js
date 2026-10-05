@@ -23,7 +23,11 @@ const stamp = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())
 const fmt = sec => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 const NUM = "①②③④⑤⑥⑦⑧⑨⑩";
 const ask = q => q.type === "pick" ? "<보기>를 참고하여 바른 표기를 고르세요." : q.stem;
-const bogi = q => q.rule ? `<div class="bogi"><span class="bogi-t">&lt;보기&gt;</span>${esc(q.rule).replace(/\n/g, "<br>")}</div>` : "";
+// <보기>: 그 항(+also 항)의 조문 전체(예시 제외). 조문은 questions.json의 rules에 항마다 한 번만 적음
+function bogi(q) {
+  const text = [q.hang, ...(q.also || [])].map(h => DATA && DATA.rules && DATA.rules[h]).filter(Boolean).join("\n");
+  return text ? `<div class="bogi"><span class="bogi-t">&lt;보기&gt;</span>${esc(text).replace(/\n/g, "<br>")}</div>` : "";
+}
 // 문제 글: pick은 {{blank}} 자리에 밑줄 칸(고른 말이 있으면 그 말), find는 발문만
 function stemHTML(q, fill) {
   if (q.type !== "pick") return "";
