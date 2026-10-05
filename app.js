@@ -14,6 +14,8 @@ const SAMPLE = { items: [
 let DATA = null;
 let count = null, quiz = [], idx = 0, picks = [], startedAt = 0, timerId = null, deadline = 0, finished = false;
 const $ = id => document.getElementById(id);
+// 기기 저장 키: 같은 주소(kysz123-prog.github.io)의 다른 웹앱과 섞이지 않게 앱 이름을 붙임
+const KEY = { session: "dw1:session", notes: "dw1:wrongNotes", pending: "dw1:pending" };
 
 // ===== 유틸 =====
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -50,7 +52,9 @@ async function load() {
       DATA = await r.json();
     } catch (e) { DATA = SAMPLE; failMsg = "문제 파일을 못 불러와 샘플로 실행 중입니다. "; }
   }
-  refreshStart(); checkResume(); retryPending();
+  refreshStart();
+  if (DATA !== SAMPLE) checkResume();   // 샘플로 돌 때는 풀던 기록을 건드리지 않음
+  retryPending();
 }
 
 // ===== 시작 화면 =====
@@ -169,8 +173,8 @@ function finish(timedOut) {
 
 // ===== 스프레드시트 전송 (실패하면 기기에 보관했다가 다음 접속 때 다시 보냄) =====
 const post = r => fetch(SHEET_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(r) });
-const pending = () => { try { return JSON.parse(localStorage.getItem("pending") || "[]"); } catch (e) { return []; } };
-const savePending = a => { try { localStorage.setItem("pending", JSON.stringify(a)); } catch (e) {} };
+const pending = () => { try { return JSON.parse(localStorage.getItem(KEY.pending) || "[]"); } catch (e) { return []; } };
+const savePending = a => { try { localStorage.setItem(KEY.pending, JSON.stringify(a)); } catch (e) {} };
 async function sendResult(r) {
   if (!SHEET_URL) return;
   try { await post(r); } catch (e) { savePending([...pending(), r]); }
@@ -184,13 +188,13 @@ async function retryPending() {
 
 // ===== 오답노트 (로컬 스토리지 보관, 같은 문제는 최근 것만) =====
 function getWrongNotes() {
-  try { return JSON.parse(localStorage.getItem("wrongNotes") || "[]"); } catch (e) { return []; }
+  try { return JSON.parse(localStorage.getItem(KEY.notes) || "[]").filter(x => x && x.q && x.q.id && Array.isArray(x.q.choices)); } catch (e) { return []; }
 }
 function saveWrongNotes(wrong) {
   if (!wrong.length) return;
   const now = stamp(new Date());
   const current = getWrongNotes().filter(x => !wrong.some(w => w.q.id === x.q.id));
-  try { localStorage.setItem("wrongNotes", JSON.stringify([...wrong.map(w => ({ q: w.q, pick: w.pick, time: now })), ...current])); } catch (e) {}
+  try { localStorage.setItem(KEY.notes, JSON.stringify([...wrong.map(w => ({ q: w.q, pick: w.pick, time: now })), ...current])); } catch (e) {}
   updateNotesBadge();
 }
 function updateNotesBadge() { const el = $("notesBadge"); if (el) el.textContent = getWrongNotes().length; }
@@ -206,22 +210,21 @@ $("btnResultNotes").addEventListener("click", openNotes);
 $("btnNotesBack").addEventListener("click", () => { show("start"); updateNotesBadge(); window.scrollTo(0, 0); });
 $("btnClearNotes").addEventListener("click", () => {
   if (confirm("오답노트를 모두 비우시겠습니까?")) {
-    try { localStorage.removeItem("wrongNotes"); } catch (e) {}
+    try { localStorage.removeItem(KEY.notes); } catch (e) {}
     renderNotes(); updateNotesBadge();
   }
 });
 
 // ===== 풀던 문제 보관 (탭이 닫히거나 새로고침돼도 이어 풀기) =====
 // 마감 시각을 그대로 보관하므로 나가 있던 시간도 제한시간에서 빠짐
-const SKEY = "session";
 function saveSession() {
   if (finished || !quiz.length) return;
-  try { localStorage.setItem(SKEY, JSON.stringify({ name: $("name").value.trim(), count, startedAt, deadline, idx, ...Core.snapshot(quiz, picks) })); } catch (e) {}
+  try { localStorage.setItem(KEY.session, JSON.stringify({ name: $("name").value.trim(), count, startedAt, deadline, idx, ...Core.snapshot(quiz, picks) })); } catch (e) {}
 }
-function clearSession() { try { localStorage.removeItem(SKEY); } catch (e) {} }
+function clearSession() { try { localStorage.removeItem(KEY.session); } catch (e) {} }
 function loadSession() {               // 문제가 바뀌었거나 깨졌으면 null(버림)
   try {
-    const s = JSON.parse(localStorage.getItem(SKEY) || "null");
+    const s = JSON.parse(localStorage.getItem(KEY.session) || "null");
     const back = s && DATA && Core.restore(s, DATA.items);
     return back && back.quiz.length ? { ...s, ...back } : null;
   } catch (e) { return null; }
