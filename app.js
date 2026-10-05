@@ -22,7 +22,8 @@ const p2 = n => String(n).padStart(2, "0");
 const stamp = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;  // 시트가 날짜·시각으로 알아보는 형식
 const fmt = sec => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
 const NUM = "①②③④⑤⑥⑦⑧⑨⑩";
-const ask = q => q.type === "pick" ? "바른 표기를 고르세요." : q.stem;
+const ask = q => q.type === "pick" ? "<보기>를 참고하여 바른 표기를 고르세요." : q.stem;
+const bogi = q => q.rule ? `<div class="bogi"><span class="bogi-t">&lt;보기&gt;</span>${esc(q.rule).replace(/\n/g, "<br>")}</div>` : "";
 // 문제 글: pick은 {{blank}} 자리에 밑줄 칸(고른 말이 있으면 그 말), find는 발문만
 function stemHTML(q, fill) {
   if (q.type !== "pick") return "";
@@ -79,7 +80,7 @@ function renderQ() {
   $("progress").textContent = `${idx + 1} / ${quiz.length}`;
   $("bar").style.width = `${(idx / quiz.length) * 100}%`;
   $("hint").textContent = `제${q.hang}항`;
-  $("sentence").innerHTML = `<p class="ask">${esc(ask(q))}</p>` + (q.type === "pick" ? `<p class="stem">${stemHTML(q, p != null ? q.choices[p] : null)}</p>` : "");
+  $("sentence").innerHTML = `<p class="ask">${esc(ask(q))}</p>` + bogi(q) + (q.type === "pick" ? `<p class="stem">${stemHTML(q, p != null ? q.choices[p] : null)}</p>` : "");
   const box = $("choices"); box.innerHTML = "";
   box.className = q.type === "find" ? "long" : "";
   q.choices.forEach((c, k) => {
@@ -120,6 +121,7 @@ function wrongCard(q, pick, meta) {
   return `<div class="card passage">
     ${meta ? `<div class="notes-meta">${meta}</div>` : ""}
     <p class="ask"><span class="tag">제${esc(q.hang)}항</span> ${esc(ask(q))}</p>
+    ${bogi(q)}
     ${q.type === "pick" ? `<p class="stem">${stemHTML(q, q.choices[q.answer])}</p>` : ""}
     <ol class="opts">${q.choices.map((c, k) => `<li class="${k === q.answer ? "ans" : k === pick ? "my-pick" : ""}">${NUM[k]} ${esc(c)}</li>`).join("")}</ol>
     <div class="wrong-box"><b class="my-pick">${esc(mine)}</b><span class="arrow">➔</span><b class="ans">${esc(ans)}</b></div>

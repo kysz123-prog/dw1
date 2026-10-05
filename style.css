@@ -135,3 +135,5 @@ table.hang { width: 100%; border-collapse: collapse; font-size: 15px; }
 table.hang th, table.hang td { border-bottom: 1px solid var(--line); padding: 7px 6px; text-align: center; }
 table.hang th { color: var(--g-d); }
 table.hang tr.miss td { color: var(--red); font-weight: 700; }
+.bogi { border: 1.5px solid var(--line); border-radius: 10px; padding: 18px 14px 10px; margin: 14px 0 12px; font-size: 14.5px; line-height: 1.7; position: relative; color: var(--ink); }
+.bogi-t { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 8px; font-weight: 800; color: var(--g-d); font-size: 14px; }
